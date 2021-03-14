@@ -9,9 +9,7 @@ package com.company.assembleegameclient.game.events
       
       public static const RECONNECT:String = "RECONNECT_EVENT";
        
-      
-      public var server_:Server;
-      
+
       public var gameId_:int;
       
       public var createCharacter_:Boolean;
@@ -22,10 +20,9 @@ package com.company.assembleegameclient.game.events
       
       public var key_:ByteArray;
       
-      public function ReconnectEvent(server:Server, gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray)
+      public function ReconnectEvent(gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray)
       {
          super(RECONNECT);
-         this.server_ = server;
          this.gameId_ = gameId;
          this.createCharacter_ = createCharacter;
          this.charId_ = charId;
@@ -35,12 +32,12 @@ package com.company.assembleegameclient.game.events
       
       override public function clone() : Event
       {
-         return new ReconnectEvent(this.server_,this.gameId_,this.createCharacter_,this.charId_,this.keyTime_,this.key_);
+         return new ReconnectEvent(this.gameId_,this.createCharacter_,this.charId_,this.keyTime_,this.key_);
       }
       
       override public function toString() : String
       {
-         return formatToString(RECONNECT,"server_","gameId_","charId_","keyTime_","key_");
+         return formatToString(RECONNECT,"gameId_","charId_","keyTime_","key_");
       }
    }
 }

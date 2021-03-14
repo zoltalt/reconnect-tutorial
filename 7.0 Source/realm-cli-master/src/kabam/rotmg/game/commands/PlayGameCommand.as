@@ -52,7 +52,7 @@ package kabam.rotmg.game.commands
       
       private function makeGameView() : void
       {
-         var server:Server = this.data.server || this.servers.getServer();
+         var server:Server = this.servers.getServer();
          var gameId:int = this.data.isNewGame ? int(this.getInitialGameId()) : int(this.data.gameId);
          var createCharacter:Boolean = this.data.createCharacter;
          var charId:int = this.data.charId;

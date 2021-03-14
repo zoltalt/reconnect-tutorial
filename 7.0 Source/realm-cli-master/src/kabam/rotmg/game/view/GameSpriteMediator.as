@@ -118,6 +118,7 @@ package kabam.rotmg.game.view
       
       private function onClosed() : void
       {
+         this.view.serverDisconnect = true;
          this.closeDialogs.dispatch();
          this.gameClosed.dispatch();
       }
@@ -129,7 +130,6 @@ package kabam.rotmg.game.view
             return;
          }
          var data:GameInitData = new GameInitData();
-         data.server = event.server_;
          data.gameId = event.gameId_;
          data.createCharacter = event.createCharacter_;
          data.charId = event.charId_;

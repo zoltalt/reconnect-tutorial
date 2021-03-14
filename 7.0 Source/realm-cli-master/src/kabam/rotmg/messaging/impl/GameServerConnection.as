@@ -284,8 +284,9 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
       private var playerModel:PlayerModel;
       private var injector:Injector;
       private var model:GameModel;
+      public var connected:Boolean;
       
-      public function GameServerConnection(gs:GameSprite, server:Server, gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray, mapJSON:String)
+      public function GameServerConnection(server:Server)
       {
          super();
          this.injector = StaticInjectorContext.getInjector();
@@ -303,8 +304,12 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
          this.model = this.injector.getInstance(GameModel);
          this.playerModel = this.injector.getInstance(PlayerModel);
          instance = this;
-         this.gs_ = gs;
          this.server_ = server;
+      }
+
+      public function update(gs:GameSprite, gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray, mapJSON:String):void
+      {
+         this.gs_ = gs;
          this.gameId_ = gameId;
          this.createCharacter_ = createCharacter;
          this.charId_ = charId;
@@ -312,9 +317,20 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
          this.key_ = key;
          this.mapJSON_ = mapJSON;
       }
+
+      private function reset():void {
+         this.connected = false;
+         this.delayBeforeReconect = 1;
+         this.player != null && this.player.dispose();
+         this.player = null;
+         this.playerId_ = -1;
+         this.lastTickId_ = -1;
+         this.jitterWatcher_ = null;
+      }
       
       public function disconnect() : void
       {
+         this.reset();
          this.removeServerConnectionListeners();
          this.unmapMessages();
          this.serverConnection.disconnect();
@@ -750,6 +766,8 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
       
       public function move(tickId:int, player:Player) : void
       {
+         if (this.player.map_ == null)
+            return;
          var len:int = 0;
          var i:int = 0;
          var x:Number = -1;
@@ -927,9 +945,15 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
       
       private function onConnected() : void
       {
-         var account:Account = StaticInjectorContext.getInjector().getInstance(Account);
+         this.connected = true;
          this.addTextLine.dispatch(new AddTextLineVO(Parameters.CLIENT_CHAT_NAME,"Connected!"));
          this.encryptConnection();
+         this.sendHello();
+      }
+
+      public function sendHello() : void
+      {
+         var account:Account = StaticInjectorContext.getInjector().getInstance(Account);
          var hello:Hello = this.messages.require(HELLO) as Hello;
          hello.buildVersion_ = Parameters.BUILD_VERSION;
          hello.gameId_ = this.gameId_;
@@ -1679,14 +1703,12 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
       
       private function onReconnect(reconnect:Reconnect) : void
       {
-         this.disconnect();
-         var server:Server = new Server().setName(reconnect.name_).setAddress(reconnect.host_ != ""?reconnect.host_:this.server_.address).setPort(reconnect.host_ != ""?int(reconnect.port_):int(this.server_.port));
          var gameID:int = reconnect.gameId_;
          var createChar:Boolean = this.createCharacter_;
          var charId:int = this.charId_;
          var keyTime:int = reconnect.keyTime_;
          var key:ByteArray = reconnect.key_;
-         var reconnectEvent:ReconnectEvent = new ReconnectEvent(server,gameID,createChar,charId,keyTime,key);
+         var reconnectEvent:ReconnectEvent = new ReconnectEvent(gameID,createChar,charId,keyTime,key);
          this.gs_.dispatchEvent(reconnectEvent);
       }
       
@@ -1728,7 +1750,8 @@ import kabam.rotmg.ui.view.NotEnoughGoldDialog;
       private function onDeath(death:Death) : void
       {
          // keep for now, seems to fix the death issue
-         disconnect();
+         this.gs_.serverDisconnect = true;
+         this.gs_.disconnect();
 
          this.death = death;
          var data:BitmapData = new BitmapData(this.gs_.stage.stageWidth,this.gs_.stage.stageHeight);

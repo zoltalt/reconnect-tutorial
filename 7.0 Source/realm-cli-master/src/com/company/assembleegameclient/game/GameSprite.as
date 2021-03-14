@@ -73,6 +73,7 @@ import kabam.rotmg.ui.UIUtils;
       private var frameTimeCount_:int = 0;
       private var isGameStarted:Boolean;
       private var displaysPosY:uint = 4;
+      public var serverDisconnect:Boolean;
       
       public function GameSprite(server:Server, gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray, model:PlayerModel, mapJSON:String)
       {
@@ -82,7 +83,8 @@ import kabam.rotmg.ui.UIUtils;
          this.model = model;
          this.map = new Map(this);
          addChild(this.map);
-         this.gsc_ = new GameServerConnection(this,server,gameId,createCharacter,charId,keyTime,key,mapJSON);
+         this.gsc_ = GameServerConnection.instance != null ? GameServerConnection.instance : new GameServerConnection(server);
+         this.gsc_.update(this, gameId, createCharacter, charId, keyTime, key, mapJSON);
          this.mui_ = new MapUserInput(this);
          this.textBox_ = new TextBox(this,600,600);
          addChild(this.textBox_);
@@ -229,9 +231,12 @@ import kabam.rotmg.ui.UIUtils;
       {
          if(!this.isGameStarted)
          {
+            this.serverDisconnect = false;
             this.isGameStarted = true;
             Renderer.inGame = true;
-            this.gsc_.connect();
+            if (!this.gsc_.connected)
+               this.gsc_.connect();
+            else this.gsc_.sendHello();
             this.idleWatcher_.start(this);
             this.lastUpdate_ = getTimer();
             stage.addEventListener(MoneyChangedEvent.MONEY_CHANGED,this.onMoneyChanged);
@@ -247,7 +252,8 @@ import kabam.rotmg.ui.UIUtils;
             this.isGameStarted = false;
             Renderer.inGame = false;
             this.idleWatcher_.stop();
-            this.gsc_.serverConnection.disconnect();
+            if (this.serverDisconnect)
+               this.gsc_.disconnect();
             stage.removeEventListener(MoneyChangedEvent.MONEY_CHANGED,this.onMoneyChanged);
             stage.removeEventListener(Event.ENTER_FRAME,this.onEnterFrame);
             LoopedProcess.destroyAll();
@@ -256,7 +262,6 @@ import kabam.rotmg.ui.UIUtils;
             CachingColorTransformer.clear();
             TextureRedrawer.clearCache();
             Projectile.dispose();
-            this.gsc_.disconnect();
          }
       }
       

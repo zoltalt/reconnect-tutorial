@@ -26,14 +26,14 @@ namespace wServer.realm
         public readonly long Time;
 
 
-        public ConInfo(Client client, Hello pkt)
+        public ConInfo(Client client, Hello pkt, bool reconnecting)
         {
             Client = client;
             Account = client.Account;
             GUID = pkt.GUID;
             GameId = pkt.GameId;
             Key = pkt.Key;
-            Reconnecting = !Key.SequenceEqual(Empty<byte>.Array);
+            Reconnecting = reconnecting;
             MapInfo = pkt.MapJSON;
             Time = DateTime.UtcNow.ToUnixTimestamp();
         }
@@ -196,11 +196,11 @@ namespace wServer.realm
                     gameId = World.Nexus;
             }
 
-            if (!client.Manager.Database.AcquireLock(acc))
+            if (!conInfo.Reconnecting && !client.Manager.Database.AcquireLock(acc))
             {
                 // disconnect current connected client (if any)
                 var otherClients = client.Manager.Clients.Keys
-                    .Where(c => c == client || c.Account != null && (c.Account.AccountId == acc.AccountId));
+                    .Where(c => c == client || c.Account != null && (c.Account.AccountId == acc.AccountId) && c.State != ProtocolState.Reconnecting);
                 foreach (var otherClient in otherClients)
                     otherClient.Disconnect();
 

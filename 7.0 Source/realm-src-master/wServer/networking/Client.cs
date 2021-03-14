@@ -22,7 +22,8 @@ namespace wServer.networking
         Disconnected,
         Connected,
         Handshaked,
-        Ready
+        Ready,
+        Reconnecting
     }
 
     public partial class Client
@@ -174,6 +175,10 @@ namespace wServer.networking
             }
 
             Log.Trace("Reconnecting client ({0}) @ {1} to {2}...", Account.Name, IP, pkt.Name);
+
+            State = ProtocolState.Reconnecting;
+            Save(false);
+
             Manager.ConMan.AddReconnect(Account.AccountId, pkt);
             SendPacket(pkt);
         }
@@ -212,7 +217,7 @@ namespace wServer.networking
                 if (Account != null)
                     try
                     {
-                        Save();
+                        Save(true);
                     }
                     catch (Exception e)
                     {
@@ -225,21 +230,23 @@ namespace wServer.networking
             }
         }
 
-        private void Save() // only when disconnect
+        private void Save(bool unlock)
         {
             var acc = Account;
 
             if (Character == null || Player == null || Player.Owner is Test)
             {
-                Manager.Database.ReleaseLock(acc);
+                if (unlock)
+                    Manager.Database.ReleaseLock(acc);
                 return;
             }
 
             Player.SaveToCharacter();
             acc.RefreshLastSeen();
             acc.FlushAsync();
-            Manager.Database.SaveCharacter(acc, Character, Player.FameCounter.ClassStats, true)
-                .ContinueWith(t => Manager.Database.ReleaseLock(acc));
+            if (unlock)
+                Manager.Database.ReleaseLock(acc);
+            Manager.Database.SaveCharacter(acc, Character, Player.FameCounter.ClassStats, !unlock);
         }
 
         public void Dispose()
