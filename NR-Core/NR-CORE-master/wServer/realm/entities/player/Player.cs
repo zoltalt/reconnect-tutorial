@@ -584,7 +584,7 @@ namespace wServer.realm.entities
 
         public override void Tick(RealmTime time)
         {
-            if (!KeepAlive(time))
+            if (!KeepAlive(time) || Client.State == ProtocolState.Reconnecting)
                 return;
 
             CheckTradeTimeout(time);
@@ -1007,7 +1007,7 @@ namespace wServer.realm.entities
 
         public void Death(string killer, Entity entity = null, WmapTile tile = null, bool rekt = false)
         {
-            if (_client.State == ProtocolState.Disconnected || _dead)
+            if (_client.State == ProtocolState.Disconnected || Client.State == ProtocolState.Reconnecting || _dead)
                 return;
 
             if (tile != null && tile.Spawned)

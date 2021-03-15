@@ -65,7 +65,7 @@ public class PlayGameCommand {
     }
 
     private function makeGameView():void {
-        var _local1:Server = ((this.data.server) || (this.servers.getServer()));
+        var _local1:Server = ((this.servers.getServer()));
         var _local2:int = ((this.data.isNewGame) ? this.getInitialGameId() : this.data.gameId);
         var _local3:Boolean = this.data.createCharacter;
         var _local4:int = this.data.charId;

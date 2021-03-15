@@ -5,7 +5,6 @@ import kabam.rotmg.servers.api.Server;
 
 public class GameInitData {
 
-    public var server:Server;
     public var gameId:int;
     public var createCharacter:Boolean;
     public var charId:int;

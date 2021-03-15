@@ -1,5 +1,6 @@
 ﻿package kabam.rotmg.messaging.impl {
 import com.company.assembleegameclient.game.AGameSprite;
+import com.company.assembleegameclient.game.GameSprite;
 import com.company.assembleegameclient.objects.GameObject;
 import com.company.assembleegameclient.objects.Player;
 import com.company.assembleegameclient.objects.Projectile;
@@ -133,7 +134,13 @@ public class GameServerConnection {
     public var jitterWatcher_:JitterWatcher;
     public var serverConnection:SocketServer;
     public var outstandingBuy_:Boolean;
+    public var connected:Boolean;
 
+    public function update(gs:GameSprite, gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray, mapJSON:String, isFromArena:Boolean):void{
+    }
+    
+    public function sendHello():void{
+    }
 
     public function chooseName(_arg1:String):void {
     }

@@ -1,5 +1,6 @@
 ﻿package kabam.rotmg.messaging.impl {
 import com.company.assembleegameclient.game.AGameSprite;
+import com.company.assembleegameclient.game.GameSprite;
 import com.company.assembleegameclient.game.events.GuildResultEvent;
 import com.company.assembleegameclient.game.events.KeyInfoResponseSignal;
 import com.company.assembleegameclient.game.events.NameResultEvent;
@@ -276,7 +277,7 @@ public class GameServerConnectionConcrete extends GameServerConnection {
     private var petsModel:PetsModel;
     private var friendModel:FriendModel;
 
-    public function GameServerConnectionConcrete(_arg1:AGameSprite, _arg2:Server, _arg3:int, _arg4:Boolean, _arg5:int, _arg6:int, _arg7:ByteArray, _arg8:String, _arg9:Boolean) {
+    public function GameServerConnectionConcrete(_arg2:Server) {
         this.injector = StaticInjectorContext.getInjector();
         this.giftChestUpdateSignal = this.injector.getInstance(GiftStatusUpdateSignal);
         this.addTextLine = this.injector.getInstance(AddTextLineSignal);
@@ -306,18 +307,22 @@ public class GameServerConnectionConcrete extends GameServerConnection {
         this.messages = this.injector.getInstance(MessageProvider);
         this.model = this.injector.getInstance(GameModel);
         this.currentArenaRun = this.injector.getInstance(CurrentArenaRunModel);
-        gs_ = _arg1;
         server_ = _arg2;
-        gameId_ = _arg3;
-        createCharacter_ = _arg4;
-        charId_ = _arg5;
-        keyTime_ = _arg6;
-        key_ = _arg7;
-        mapJSON_ = _arg8;
-        isFromArena_ = _arg9;
+        instance = this;
+    }
+
+    override public function update(gs:GameSprite, gameId:int, createCharacter:Boolean, charId:int, keyTime:int, key:ByteArray, mapJSON:String, isFromArena:Boolean):void
+    {
+        gs_ = gs;
+        gameId_ = gameId;
+        createCharacter_ = createCharacter;
+        charId_ = charId;
+        keyTime_ = keyTime;
+        key_ = key;
+        mapJSON_ = mapJSON;
+        isFromArena_ = isFromArena;
         this.friendModel.setCurrentServer(server_);
         this.getPetUpdater();
-        instance = this;
     }
 
     private static function isStatPotion(_arg1:int):Boolean {
@@ -331,7 +336,18 @@ public class GameServerConnectionConcrete extends GameServerConnection {
         this.injector.unmap(AGameSprite);
     }
 
+    private function reset():void {
+        this.connected = false;
+        this.delayBeforeReconnect = 1;
+        this.player != null && this.player.dispose();
+        this.player = null;
+        this.playerId_ = -1;
+        this.lastTickId_ = -1;
+        this.jitterWatcher_ = null;
+    }
+
     override public function disconnect():void {
+        this.reset();
         this.removeServerConnectionListeners();
         this.unmapMessages();
         serverConnection.disconnect();
@@ -862,6 +878,8 @@ public class GameServerConnectionConcrete extends GameServerConnection {
     }
 
     public function move(_arg1:int, _arg2:Player):void {
+        if (this.player.map_ == null)
+            return;
         var _local7:int;
         var _local8:int;
         var _local3:Number = -1;
@@ -1058,9 +1076,15 @@ public class GameServerConnectionConcrete extends GameServerConnection {
     }
 
     private function onConnected():void {
-        var _local1:Account = StaticInjectorContext.getInjector().getInstance(Account);
+        this.connected = true;
         this.addTextLine.dispatch(ChatMessage.make(Parameters.CLIENT_CHAT_NAME, TextKey.CHAT_CONNECTED));
         this.encryptConnection();
+        this.sendHello();
+    }
+
+    override public function sendHello() : void
+    {
+        var _local1:Account = StaticInjectorContext.getInjector().getInstance(Account);
         var _local2:Hello = (this.messages.require(HELLO) as Hello);
         _local2.buildVersion_ = Parameters.FULL_BUILD;
         _local2.gameId_ = gameId_;
@@ -1814,23 +1838,18 @@ public class GameServerConnectionConcrete extends GameServerConnection {
     }
 
     private function onReconnect(_arg1:Reconnect):void {
-        var _local2:Server = new Server().setName(_arg1.name_).setAddress((((_arg1.host_) != "") ? _arg1.host_ : server_.address)).setPort((((_arg1.host_) != "") ? _arg1.port_ : server_.port));
         var _local3:int = _arg1.gameId_;
         var _local4:Boolean = createCharacter_;
         var _local5:int = charId_;
         var _local6:int = _arg1.keyTime_;
         var _local7:ByteArray = _arg1.key_;
         isFromArena_ = _arg1.isFromArena_;
-        var _local8:ReconnectEvent = new ReconnectEvent(_local2, _local3, _local4, _local5, _local6, _local7, isFromArena_);
+        var _local8:ReconnectEvent = new ReconnectEvent(_local3, _local4, _local5, _local6, _local7, isFromArena_);
         gs_.dispatchEvent(_local8);
     }
 
     private function reconnect2Nexus():void {
-        var svr:Server = new Server()
-                .setName("Nexus")
-                .setAddress(server_.address)
-                .setPort(server_.port);
-        var reconEvt:ReconnectEvent = new ReconnectEvent(svr, -2, false, charId_, 0, null, isFromArena_);
+        var reconEvt:ReconnectEvent = new ReconnectEvent(-2, false, charId_, 0, null, isFromArena_);
         gs_.dispatchEvent(reconEvt);
     }
 
@@ -1875,6 +1894,10 @@ public class GameServerConnectionConcrete extends GameServerConnection {
     }
 
     private function onDeath(_arg1:Death):void {
+        var gs:GameSprite = this.gs_ as GameSprite;
+        gs.serverDisconnect = true;
+        gs.disconnect();
+        
         this.death = _arg1;
         var _local2:BitmapData = new BitmapDataSpy(gs_.stage.stageWidth, gs_.stage.stageHeight);
         _local2.draw(gs_);

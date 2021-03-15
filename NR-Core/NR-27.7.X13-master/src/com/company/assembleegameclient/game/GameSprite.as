@@ -48,6 +48,7 @@ import kabam.rotmg.game.view.GiftStatusDisplay;
 import kabam.rotmg.game.view.NewsModalButton;
 import kabam.rotmg.maploading.signals.HideMapLoadingSignal;
 import kabam.rotmg.maploading.signals.MapLoadedSignal;
+import kabam.rotmg.messaging.impl.GameServerConnection;
 import kabam.rotmg.messaging.impl.GameServerConnectionConcrete;
 import kabam.rotmg.messaging.impl.incoming.MapInfo;
 import kabam.rotmg.news.model.NewsModel;
@@ -103,6 +104,7 @@ public class GameSprite extends AGameSprite {
     private var currentPackage:DisplayObject;
     private var packageY:Number;
     public var chatPlayerMenu:PlayerMenu;
+    public var serverDisconnect:Boolean;
 
     public function GameSprite(_arg1:Server, _arg2:int, _arg3:Boolean, _arg4:int, _arg5:int, _arg6:ByteArray, _arg7:PlayerModel, _arg8:String, _arg9:Boolean) {
         this.showPackage = new Signal();
@@ -111,7 +113,8 @@ public class GameSprite extends AGameSprite {
         this.model = _arg7;
         map = new Map(this);
         addChild(map);
-        gsc_ = new GameServerConnectionConcrete(this, _arg1, _arg2, _arg3, _arg4, _arg5, _arg6, _arg8, _arg9);
+        this.gsc_ = GameServerConnection.instance != null ? GameServerConnection.instance : new GameServerConnectionConcrete(_arg1);
+        this.gsc_.update(this, _arg2, _arg3, _arg4, _arg5, _arg6, _arg8, _arg9);
         mui_ = new MapUserInput(this);
         this.chatBox_ = new Chat();
         this.chatBox_.list.addEventListener(MouseEvent.MOUSE_DOWN, this.onChatDown);
@@ -416,9 +419,12 @@ public class GameSprite extends AGameSprite {
 
     public function connect():void {
         if (!this.isGameStarted) {
+            this.serverDisconnect = false;
             this.isGameStarted = true;
             Renderer.inGame = true;
-            gsc_.connect();
+            if (!this.gsc_.connected)
+                this.gsc_.connect();
+            else this.gsc_.sendHello();
             this.idleWatcher_.start(this);
             lastUpdate_ = getTimer();
             stage.addEventListener(MoneyChangedEvent.MONEY_CHANGED, this.onMoneyChanged);
@@ -432,6 +438,8 @@ public class GameSprite extends AGameSprite {
             this.isGameStarted = false;
             Renderer.inGame = false;
             this.idleWatcher_.stop();
+            if (this.serverDisconnect)
+                this.gsc_.disconnect();
             stage.removeEventListener(MoneyChangedEvent.MONEY_CHANGED, this.onMoneyChanged);
             stage.removeEventListener(Event.ENTER_FRAME, this.onEnterFrame);
             LoopedProcess.destroyAll();
@@ -440,7 +448,6 @@ public class GameSprite extends AGameSprite {
             CachingColorTransformer.clear();
             TextureRedrawer.clearCache();
             Projectile.dispose();
-            gsc_.disconnect();
         }
     }
 

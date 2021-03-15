@@ -199,11 +199,11 @@ namespace wServer.realm
                     gameId = World.Nexus;
             }
 
-            if (!client.Manager.Database.AcquireLock(acc))
+            if (!conInfo.Reconnecting && !client.Manager.Database.AcquireLock(acc))
             {
                 // disconnect current connected client (if any)
                 var otherClients = client.Manager.Clients.Keys
-                    .Where(c => c == client || c.Account != null && (c.Account.AccountId == acc.AccountId || c.Account.DiscordId != null && c.Account.DiscordId == acc.DiscordId));
+                    .Where(c => c == client || c.Account != null && c.State != ProtocolState.Reconnecting && (c.Account.AccountId == acc.AccountId || c.Account.DiscordId != null && c.Account.DiscordId == acc.DiscordId));
                 foreach (var otherClient in otherClients)
                     otherClient.Disconnect();
 

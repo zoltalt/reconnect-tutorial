@@ -176,6 +176,7 @@ public class GameSpriteMediator extends Mediator {
     }
 
     private function onClosed():void {
+        this.view.serverDisconnect = true;
         if (!this.view.isEditor) {
             this.gameClosed.dispatch();
         }
@@ -190,7 +191,6 @@ public class GameSpriteMediator extends Mediator {
             return;
         }
         var _local2:GameInitData = new GameInitData();
-        _local2.server = _arg1.server_;
         _local2.gameId = _arg1.gameId_;
         _local2.createCharacter = _arg1.createCharacter_;
         _local2.charId = _arg1.charId_;
