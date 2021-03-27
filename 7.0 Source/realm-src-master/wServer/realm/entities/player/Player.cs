@@ -12,6 +12,7 @@ using wServer.networking.packets.outgoing;
 using wServer.realm.worlds;
 using wServer.realm.worlds.logic;
 using NLog;
+using Mono.Game;
 
 namespace wServer.realm.entities
 {
@@ -514,6 +515,8 @@ namespace wServer.realm.entities
                 plr.AwaitGotoAck(time.TotalElapsedMs);
                 plr.Client.SendPackets(tpPkts);
             }
+
+            Move(position.X, position.Y);
         }
 
         public void Teleport(RealmTime time, int objId, bool ignoreRestrictions = false)
@@ -815,6 +818,14 @@ namespace wServer.realm.entities
 
                 Sight.UpdateCount++;
             }
+        }
+
+        public void TryMoveDirection(Position pos)
+        {
+            var dist = Stats.GetSpeed() * (_moveTimeMs / 1000f);
+            var direction = new Vector2(pos.X - X, pos.Y - Y);
+            direction.Normalize();
+            Move(X + direction.X * dist, Y + direction.Y * dist);
         }
 
         public override void Dispose()
