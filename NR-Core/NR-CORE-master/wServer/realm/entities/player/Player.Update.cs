@@ -72,6 +72,8 @@ namespace wServer.realm.entities
         private Update.TileData[] _tiles;
         private ObjectDef[] _newObjects;
         private int[] _removedObjects;
+        private long _lastNewTick;
+        private int _moveTimeMs;
 
         private readonly object _statUpdateLock = new object();
         private readonly Dictionary<Entity, Dictionary<StatsType, object>> _statUpdates = 
@@ -104,6 +106,9 @@ namespace wServer.realm.entities
 
         private void SendNewTick(RealmTime time)
         {
+            _moveTimeMs = (int)(time.TotalElapsedMs - _lastNewTick);
+            _lastNewTick = time.TotalElapsedMs;
+
             using (TimedLock.Lock(_statUpdateLock))
             {
                 _updateStatuses = _statUpdates.Select(_ => new ObjectStats()

@@ -29,7 +29,7 @@ namespace wServer.networking.handlers
                 if (newX != -1 && newX != player.X ||
                     newY != -1 && newY != player.Y)
                 {
-                    player.Move(newX, newY);
+                    player.TryMoveDirection(packet.NewPosition);
                 }
             }
         }
