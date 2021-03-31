@@ -1045,8 +1045,7 @@ public class GameServerConnectionConcrete extends GameServerConnection {
 
         this.checkDavyKeyRemoval();
 
-        //serverConnection.sendMessage(this.messages.require(ESCAPE));
-        reconnect2Nexus();
+        serverConnection.sendMessage(this.messages.require(ESCAPE));
     }
 
     override public function gotoQuestRoom():void {
@@ -1846,11 +1845,6 @@ public class GameServerConnectionConcrete extends GameServerConnection {
         isFromArena_ = _arg1.isFromArena_;
         var _local8:ReconnectEvent = new ReconnectEvent(_local3, _local4, _local5, _local6, _local7, isFromArena_);
         gs_.dispatchEvent(_local8);
-    }
-
-    private function reconnect2Nexus():void {
-        var reconEvt:ReconnectEvent = new ReconnectEvent(-2, false, charId_, 0, null, isFromArena_);
-        gs_.dispatchEvent(reconEvt);
     }
 
     private function onPing(_arg1:Ping):void {
