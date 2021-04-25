@@ -4,12 +4,14 @@ import com.company.assembleegameclient.parameters.Parameters;
 import com.company.assembleegameclient.screens.TitleMenuOption;
 import com.company.assembleegameclient.sound.Music;
 import com.company.assembleegameclient.sound.SFX;
+import com.company.assembleegameclient.ui.Scrollbar;
 import com.company.assembleegameclient.ui.StatusBar;
 import com.company.rotmg.graphics.ScreenGraphic;
 import com.company.util.AssetLibrary;
 import com.company.util.KeyCodes;
 
 import flash.display.BitmapData;
+import flash.display.Graphics;
 import flash.display.Sprite;
 import flash.display.StageDisplayState;
 import flash.events.Event;
@@ -35,6 +37,8 @@ import kabam.rotmg.ui.UIUtils;
 
 public class Options extends Sprite {
 
+    private static const WIDTH:int = 800;
+    private static const HEIGHT:int = 423;
     private static const TABS:Vector.<String> = new <String>[TextKey.OPTIONS_CONTROLS, TextKey.OPTIONS_HOTKEYS, TextKey.OPTIONS_CHAT, TextKey.OPTIONS_GRAPHICS, TextKey.OPTIONS_SOUND, TextKey.OPTIONS_FRIEND, TextKey.OPTIONS_MISC];
     public static const Y_POSITION:int = 550;
     public static const CHAT_COMMAND:String = "chatCommand";
@@ -53,6 +57,11 @@ public class Options extends Sprite {
     private var tabs_:Vector.<OptionsTabTitle>;
     private var selected_:OptionsTabTitle = null;
     private var options_:Vector.<Sprite>;
+    private var optionContainer:Sprite;
+    private var container:Sprite;
+    private var containerMask:Sprite;
+    private var scrollbar:Scrollbar;
+    private var containerHeight:int;
 
     public function Options(_arg1:GameSprite) {
         var _local2:TextFieldDisplayConcrete;
@@ -70,6 +79,11 @@ public class Options extends Sprite {
         graphics.moveTo(0, 100);
         graphics.lineTo(800, 100);
         graphics.lineStyle();
+        this.container = new Sprite();
+        this.container.y = 101;
+        this.optionContainer = new Sprite();
+        this.container.addChild(this.optionContainer);
+        addChild(this.container);
         _local2 = new TextFieldDisplayConcrete().setSize(36).setColor(0xFFFFFF);
         _local2.setBold(true);
         _local2.setStringBuilder(new LineBuilder().setParams(TextKey.OPTIONS_TITLE));
@@ -224,29 +238,55 @@ public class Options extends Sprite {
         switch (this.selected_.text_) {
             case TextKey.OPTIONS_CONTROLS:
                 this.addControlsOptions();
-                return;
+                break;
             case TextKey.OPTIONS_HOTKEYS:
                 this.addHotKeysOptions();
-                return;
+                break;
             case TextKey.OPTIONS_CHAT:
                 this.addChatOptions();
-                return;
+                break;
             case TextKey.OPTIONS_GRAPHICS:
                 this.addGraphicsOptions();
-                return;
+                break;
             case TextKey.OPTIONS_SOUND:
                 this.addSoundOptions();
-                return;
+                break;
             case TextKey.OPTIONS_MISC:
                 this.addMiscOptions();
-                return;
+                break;
             case TextKey.OPTIONS_FRIEND:
                 this.addFriendOptions();
-                return;
+                break;
             case "Experimental":
                 this.addExperimentalOptions();
-                return;
+                break;
         }
+
+        this.containerHeight = this.container.height;
+        if (this.containerHeight > HEIGHT) {
+            this.containerHeight += 22 + 5; // (option offset) + (extra offset)
+            this.containerMask = new Sprite();
+            var g:Graphics = this.containerMask.graphics;
+            g.beginFill(0);
+            g.drawRect(0, 0, WIDTH, HEIGHT);
+            g.endFill();
+            this.container.addChild(this.containerMask);
+            this.container.mask = this.containerMask;
+            this.addScrollbar();
+        }
+    }
+
+    private function addScrollbar():void {
+        this.scrollbar = new Scrollbar(16, HEIGHT - 5);
+        this.scrollbar.x = 800 - (this.scrollbar.width + 3);
+        this.scrollbar.y = this.container.y + 3;
+        this.scrollbar.setIndicatorSize(HEIGHT - 1, this.containerHeight);
+        this.scrollbar.addEventListener(Event.CHANGE, this.onScrollbarChange);
+        addChild(this.scrollbar);
+    }
+
+    private function onScrollbarChange(e:Event):void {
+        this.optionContainer.y = -this.scrollbar.pos() * (this.containerHeight - HEIGHT);
     }
 
     private function onAddedToStage(_arg1:Event):void {
@@ -294,7 +334,17 @@ public class Options extends Sprite {
     private function removeOptions():void {
         var _local1:Sprite;
         for each (_local1 in this.options_) {
-            removeChild(_local1);
+            this.optionContainer.removeChild(_local1);
+        }
+        this.container.mask = null;
+        if (this.containerMask != null) {
+            this.container.removeChild(this.containerMask);
+            this.containerMask = null;
+        }
+        if (this.scrollbar != null){
+            this.scrollbar.removeEventListener(Event.CHANGE, this.onScrollbarChange);
+            removeChild(this.scrollbar);
+            this.scrollbar = null;
         }
         this.options_.length = 0;
     }
@@ -547,15 +597,15 @@ public class Options extends Sprite {
         var positionOption:Function;
         positionOption = function ():void {
             option.x = (((((options_.length % 2) == 0)) ? 20 : 415) + offsetX);
-            option.y = (((int((options_.length / 2)) * 44) + 122) + offsetY);
+            option.y = (((int((options_.length / 2)) * 44) + 22) + offsetY);
         };
         option.textChanged.addOnce(positionOption);
         this.addOption(option);
     }
 
     private function addOption(_arg1:Option):void {
-        addChild(_arg1);
         _arg1.addEventListener(Event.CHANGE, this.onChange);
+        this.optionContainer.addChild(_arg1);
         this.options_.push(_arg1);
     }
 

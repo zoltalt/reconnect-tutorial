@@ -5,10 +5,12 @@ package com.company.assembleegameclient.ui.options
    import com.company.assembleegameclient.screens.TitleMenuOption;
    import com.company.assembleegameclient.sound.Music;
    import com.company.assembleegameclient.sound.SFX;
+import com.company.assembleegameclient.ui.Scrollbar;
    import com.company.rotmg.graphics.ScreenGraphic;
 import com.company.ui.SimpleText;
 import com.company.ui.SimpleText;
    import com.company.util.KeyCodes;
+import flash.display.Graphics;
    import flash.display.Sprite;
    import flash.display.StageDisplayState;
    import flash.events.Event;
@@ -17,9 +19,12 @@ import com.company.ui.SimpleText;
    import flash.filters.DropShadowFilter;
    import flash.system.Capabilities;
    import flash.text.TextFieldAutoSize;
-   
+
    public class Options extends Sprite
    {
+
+      private static const WIDTH:int = 800;
+      private static const HEIGHT:int = 423;
       private static const CONTROLS_TAB:String = "Controls";
       private static const HOTKEYS_TAB:String = "Hot Keys";
       private static const CHAT_TAB:String = "Chat";
@@ -37,7 +42,12 @@ import com.company.ui.SimpleText;
       private var selected_:OptionsTabTitle = null;
       private var options_:Vector.<Sprite>;
       private var optionIndex_:int = 0;
-      
+      private var optionContainer:Sprite;
+      private var container:Sprite;
+      private var containerMask:Sprite;
+      private var scrollbar:Scrollbar;
+      private var containerHeight:int;
+
       public function Options(gs:GameSprite)
       {
          var tab:OptionsTabTitle = null;
@@ -53,6 +63,11 @@ import com.company.ui.SimpleText;
          graphics.moveTo(0,100);
          graphics.lineTo(800,100);
          graphics.lineStyle();
+         this.container = new Sprite();
+         this.container.y = 101;
+         this.optionContainer = new Sprite();
+         this.container.addChild(this.optionContainer);
+         addChild(this.container);
          this.title_ = new SimpleText(36,16777215,false,800,0);
          this.title_.setBold(true);
          this.title_.htmlText = "<p align=\"center\">Options</p>";
@@ -86,12 +101,12 @@ import com.company.ui.SimpleText;
          addEventListener(Event.ADDED_TO_STAGE,this.onAddedToStage);
          addEventListener(Event.REMOVED_FROM_STAGE,this.onRemovedFromStage);
       }
-      
+
       private function onContinueClick(event:MouseEvent) : void
       {
          this.close();
       }
-      
+
       private function onResetToDefaultsClick(event:MouseEvent) : void
       {
          var option:Option = null;
@@ -107,19 +122,19 @@ import com.company.ui.SimpleText;
          Parameters.save();
          this.refresh();
       }
-      
+
       private function onHomeClick(event:MouseEvent) : void
       {
          this.close();
          this.gs_.closed.dispatch();
       }
-      
+
       private function onTabClick(event:MouseEvent) : void
       {
          var tab:OptionsTabTitle = event.target as OptionsTabTitle;
          this.setSelected(tab);
       }
-      
+
       private function setSelected(tab:OptionsTabTitle) : void
       {
          if(tab == this.selected_)
@@ -152,9 +167,36 @@ import com.company.ui.SimpleText;
                break;
             case MISC_TAB:
               this.addMiscOptions();
+               break;
          }
+
+          this.containerHeight = this.container.height;
+          if (this.containerHeight > HEIGHT) {
+              this.containerHeight += 22 + 5; // (option offset) + (extra offset)
+              this.containerMask = new Sprite();
+              var g:Graphics = this.containerMask.graphics;
+              g.beginFill(0);
+              g.drawRect(0, 0, WIDTH, HEIGHT);
+              g.endFill();
+              this.container.addChild(this.containerMask);
+              this.container.mask = this.containerMask;
+              this.addScrollbar();
+          }
       }
-      
+
+       private function addScrollbar():void {
+           this.scrollbar = new Scrollbar(16, HEIGHT - 5);
+           this.scrollbar.x = 800 - (this.scrollbar.width + 3);
+           this.scrollbar.y = this.container.y + 3;
+           this.scrollbar.setIndicatorSize(HEIGHT - 1, this.containerHeight);
+           this.scrollbar.addEventListener(Event.CHANGE, this.onScrollbarChange);
+           addChild(this.scrollbar);
+       }
+
+       private function onScrollbarChange(e:Event):void {
+           this.optionContainer.y = -this.scrollbar.pos() * (this.containerHeight - HEIGHT);
+       }
+
       private function onAddedToStage(event:Event) : void
       {
          this.continueButton_.x = stage.stageWidth / 2 - this.continueButton_.width / 2;
@@ -167,13 +209,13 @@ import com.company.ui.SimpleText;
          stage.addEventListener(KeyboardEvent.KEY_DOWN,this.onKeyDown,false,1);
          stage.addEventListener(KeyboardEvent.KEY_UP,this.onKeyUp,false,1);
       }
-      
+
       private function onRemovedFromStage(event:Event) : void
       {
          stage.removeEventListener(KeyboardEvent.KEY_DOWN,this.onKeyDown,false);
          stage.removeEventListener(KeyboardEvent.KEY_UP,this.onKeyUp,false);
       }
-      
+
       private function onKeyDown(event:KeyboardEvent) : void
       {
          if(event.keyCode == Parameters.data_.options)
@@ -182,29 +224,39 @@ import com.company.ui.SimpleText;
          }
          event.stopImmediatePropagation();
       }
-      
+
       private function close() : void
       {
          stage.focus = null;
          parent.removeChild(this);
       }
-      
+
       private function onKeyUp(event:KeyboardEvent) : void
       {
          event.stopImmediatePropagation();
       }
-      
+
       private function removeOptions() : void
       {
          var option:Sprite = null;
          for each(option in this.options_)
          {
-            removeChild(option);
+             this.optionContainer.removeChild(option);
+         }
+          this.container.mask = null;
+          if (this.containerMask != null) {
+              this.container.removeChild(this.containerMask);
+              this.containerMask = null;
+          }
+          if (this.scrollbar != null){
+              this.scrollbar.removeEventListener(Event.CHANGE, this.onScrollbarChange);
+              removeChild(this.scrollbar);
+              this.scrollbar = null;
          }
          this.options_.length = 0;
          this.optionIndex_ = 0;
       }
-      
+
       private function addControlsOptions() : void
       {
          this.addOption(new KeyMapper("moveUp","Move Up","Key to will move character up"));
@@ -223,7 +275,7 @@ import com.company.ui.SimpleText;
          this.addOption(new KeyMapper("interact","Interact/Buy","This key will allow you to enter a portal or buy an item"));
          this.addOption(new ChoiceOption("contextualClick",new <String>["On","Off"],[true,false],"Contextual Click","Toggle the contextual click functionality",null));
       }
-      
+
       private function onAllowRotationChange() : void
       {
          var keyMapper:KeyMapper = null;
@@ -239,7 +291,7 @@ import com.company.ui.SimpleText;
             }
          }
       }
-      
+
       private function addHotKeysOptions() : void
       {
          this.addOption(new KeyMapper("useHealthPotion","Use/Buy Health Potion","This key will use health potions if available, buy if unavailable"));
@@ -260,7 +312,7 @@ import com.company.ui.SimpleText;
          var key:String = Capabilities.os.split(" ")[0] == "Mac"?"Command":"Ctrl";
          this.addOption(new ChoiceOption("inventorySwap",new <String>["On","Off"],[true,false],"Switch item to/from backpack.","Hold the " + key + " key and click on an item to swap it between your inventory and your backpack.",null));
       }
-      
+
       private function addChatOptions() : void
       {
          this.addOption(new KeyMapper("chat","Activate Chat","This key will bring up the chat input box"));
@@ -270,7 +322,7 @@ import com.company.ui.SimpleText;
          this.addOption(new KeyMapper("scrollChatUp","Scroll Chat Up","This key will scroll up to older messages in the chat " + "buffer"));
          this.addOption(new KeyMapper("scrollChatDown","Scroll Chat Down","This key will scroll down to newer messages in the chat " + "buffer"));
       }
-      
+
       private function addGraphicsOptions() : void
       {
          this.addOption(new ChoiceOption("defaultCameraAngle",new <String>["45°","0°"],[7 * Math.PI / 4,0],"Default Camera Angle","This toggles the default camera angle",this.onDefaultCameraAngleChange));
@@ -294,13 +346,13 @@ import com.company.ui.SimpleText;
          this.addOption(new ChoiceOption("allyDamage", new <String>["On","Off"], [true,false], "Ally Damage", "This toggles whether to show damage dealt to and by allies. Disable this to improve performance.", null));
          this.addOption(new ChoiceOption("allyNotifs", new <String>["On","Off"], [true,false], "Ally Notifications", "This toggles whether to show notifications targeted at other players. Disable this to improve performance.", null));
       }
-      
+
       private function onDefaultCameraAngleChange() : void
       {
          Parameters.data_.cameraAngle = Parameters.data_.defaultCameraAngle;
          Parameters.save();
       }
-      
+
       private function onShowQuestPortraitsChange() : void
       {
          if(this.gs_ != null && this.gs_.map != null && this.gs_.map.partyOverlay_ != null && this.gs_.map.partyOverlay_.questArrow_ != null)
@@ -317,32 +369,32 @@ import com.company.ui.SimpleText;
          this.addOption(new Sprite());
          this.addOption(new ChoiceOption("playPewPew",new <String>["On","Off"],[true,false],"Play Weapon Sounds","This toggles whether weapon sounds are played",null));
       }
-      
+
       private function onPlayMusicChange() : void
       {
          Music.setPlayMusic(Parameters.data_.playMusic);
       }
-      
+
       private function onPlaySoundEffectsChange() : void
       {
          SFX.setPlaySFX(Parameters.data_.playSFX);
       }
-      
+
       private function addOption(option:Sprite) : void
       {
          option.x = this.optionIndex_ % 2 == 0?Number(20):Number(415);
-         option.y = int(this.optionIndex_ / 2) * 44 + 122;
-         addChild(option);
+         option.y = int(this.optionIndex_ / 2) * 44 + 22;
          option.addEventListener(Event.CHANGE,this.onChange);
+         this.optionContainer.addChild(option);
          this.options_.push(option);
          this.optionIndex_++;
       }
-      
+
       private function onChange(event:Event) : void
       {
          this.refresh();
       }
-      
+
       private function refresh() : void
       {
          var option:Option = null;
