@@ -9,7 +9,7 @@ namespace wServer.networking.handlers
 
         protected override void HandlePacket(Client client, UpdateAck packet)
         {
-            if (client.State != ProtocolState.Reconnecting)
+            if (client.State == ProtocolState.Reconnecting)
                 return;
 
             client.Player.UpdateAckReceived();
